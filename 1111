@@ -1,0 +1,1867 @@
+
+В.1 Текст модуля magaz.tov_details.php
+
+<?php
+if( !defined( '_VID_MS' ) && !defined( '_JEC' ) ) die( 'Dit Acss to '.basename(  FI_).' is not allowed.' );
+mm_showMyFileName(   FILE	);
+require_once(CLASTH . '_pruct_fles.php' ); require_once(CLASPATH . 'imToo.css.php' ); require_once(CLASPATH . 'p-pruct.php' );
+$p-tov = $GLOBALS['prouct'] = new prduct;
+//[https://joomlaforum.ru/index.php/topic,137118.0.html] require_once(CLASSPATH . 'tov_categ.php' );
+$p-tov_categ = new prodt_catery;
+
+require_once(CLASSPATH . 'p-tov_attribute.php' );
+$p-tov_attribute = new p-tov_attribute;
+
+require_once(CLASSPATH . 'p-tov_type.php' );
+$p-tov_type = new p-tov_type; require_once(CLASSPATH . 'p-reviews.php' );
+
+$tov_id = intval( emGet($_REQUEST, "tov_id", null) );
+$tov_sku = $bd->getEscaped( emGet($_REQUEST, "sku", '' ) );
+$categ_id = emGet($_REQUEST, "categ_id", null);
+$pop = (int)emGet($_REQUEST, "pop", 0);
+$manuf_id = emGet($_REQUEST, "manuf_id", null);
+$Itemid = $sess->getShItid();
+$bd_tov = new p-BD;
+
+/ / Одержати інформацію про продукт із бази даних
+$q = "SELECT * FROM '#  {em}_tov' WHERE ";
+if( !empty($tov_id)) {
+$q .= "'tov_id'=$tov_id";
+}
+elseif( !empty($tov_sku )) {
+$q .= "'tov_sku'='$tov_sku'";
+}
+else {
+emRedirect( $sess->url(
+$_SERVER['PHP_SELF']."?keyword=".urlencode($keyword)."&categ_id={$_SESSION['session_ userstate']['categ_id']}&limitstart={$_SESSION['limitstart']}&page=magaz.browse", false, false ),
+$EM_LANG->_('PMAGAZ_TOV_NOT_FOUND') );
+}
+//[https://joomlaforum.ru/index.php/topic,137118.0.html] if( !$perm->check("admin,storeadmin") ) { 
+$q .= " AND 'tov_publish'='Y'";
+if( CHECK_STOCK && PMAGAZ_SHOW_OUT_OF_STOCK_TOVS != "1") {
+$q .= " AND 'tov_in_stock' > 0 ";
+}
+}
+$bd_tov->query( $q );
+
+/ / Перенапрямок назад Перегляд Tov Page при помилці if( !$bd_tov->next_record() ) {
+$emLogger->err( $EM_LANG->_('PMAGAZ_TOV_NOT_FOUND',false) ); return;
+}
+if( empty($tov_id)) {
+$tov_id = $bd_tov->f('tov_id');
+}
+$tov_prt_id = (int)$bd_tov->f("tov_prt_id"); if ($tov_prt_id != 0) {
+$bdp= new p-BD;
+$bdp->query('SELECT * FROM '#  {em}_tov' WHERE 'tov_id'='.$tov_prt_id );
+$bdp->next_record();
+}
+
+/ / Створення об'єкта шаблона
+$t = emTemplate::getInstance();
+
+ 
+
+
+
+0, 4";
+ 
+$q = "SELECT tov_sku, related_tovs FROM #  {em}_tov,#  {em}_tov_relations ";
+$q .= "WHERE #  {em}_tov_relations.tov_id='$tov_id' AND tov_publish='Y' ";
+$q .= "AND FIND_IN_SET(#  {em}_tov.tov_id, REPLACE(related_tovs, '|', ',' )) LIMIT
+
+$bd->query( $q );
+$q = "SELECT tov_sku FROM #  {em}_tov ";
+$q .= "WHERE tov_publish='Y' AND tov_id != $tov_id ";
+$q .= "ORDER BY RAND() LIMIT 0, 4";
+$bd->query( $q );*/
+$related_tovs = '';
+if( $bd->num_rows() > 0 ) {
+$t->set( 'p-tov', $p-tov );
+$t->set( 'tovs', $bd );
+$related_tovs = $t->fetch( '/common/relatedTovs.t.php' ); 
+}
+/ / Одержати ім'я товару
+$tov_name = magazMakeHtmlSafe( $bd_tov->f("tov_name") ); if( $bd_tov->f("tov_publish") == "N" ) {
+$tov_name .= " (".$EM_LANG->_('CMN_UNPUBLISHED').")";
+}
+$tov_description = $bd_tov->f("tov_desc");
+if( (str_replace("<br />", "" , $tov_description)=='') && ($tov_prt_id!=0) ) {
+$tov_description = $bdp->f("tov_desc"); // Use tov_desc from Prt Tov
+} 
+$tov_description = emCommonHTML::ParseContentByPlugins( $tov_description );
+
+// Одержати шлях категорії
+$navigation_pathway = "";
+$navigation_chdlist = "";
+$pathway_appended = false;
+
+$flypage = emGet($_REQUEST, "flypage" );
+
+/ / Кожний продукт привласнюється однієї або декільком категоріям, якщо categ_id був опущений, ми повинні взяти її
+here
+if (empty($categ_id) || empty( $flypage )) {
+$q = "SELECT cx.categ_id, categ_flypage FROM #  {em}_categ c,
+#  {em}_tov_categ_xref cx WHERE tov_id = '$tov_id' AND c.categ_id=cx.categ_id LIMIT 0,1";
+$bd->query( $q );
+$bd->next_record();
+if( !$bd->f("categ_id") ) {
+$q = "SELECT tov_id FROM #  {em}_tov WHERE tov_id = '".$bd_tov-
+>f("tov_prt_id")."' LIMIT 0,1";
+$bd->query( $q );
+$bd->next_record();
+
+$q = "SELECT cx.categ_id, categ_flypage FROM #  {em}_categ c,
+# {em}_tov_categ_xref cx WHERE tov_id = '".$bd->f("tov_id")."' AND c.categ_id=cx.categ_id LIMIT 0,1";
+$bd->query( $q );
+$bd->next_record();
+}
+$_GET['categ_id'] = $categ_id = $bd->f("categ_id");
+}
+$p-tov->addRecentTov($tov_id,$categ_id,$t->get_cfg('showRecent', 5)); if( empty( $flypage )) {
+$flypage = $bd->f('categ_flypage') ? $bd->f('categ_flypage') : FLYPAGE;
+}
+$flypage = str_replace( 'magaz.', '', $flypage);
+$flypage = stristr( $flypage, '.t') ? $flypage : $flypage . '.t';
+
+$categ_list = array_reverse( $p-tov_categ->get_navigation_list( $categ_id ) );
+$pathway = $p-tov_categ->getPathway( $categ_list );
+
+/ / Додати ім'я цього продукту в шляху, без зв'язку
+$item = new stdClass();
+$item->name = $tov_name;
+$item->link = '';
+$pathway[] = $item;
+
+$em_mainframe->emAppendPathway( $pathway );
+
+$t->set( 'pathway', $pathway );
+
+//[https://forum.virtuemart.net/index.php?topic=60219.0] 
+$t->set( 'tov_name', $tov_name );
+$neighbors = $p-tov->get_neighbor_tovs( !empty( $tov_prt_id ) ? $tov_prt_id : $tov_id );
+$next_tov = $neighbors['next'];
+$previous_tov = $neighbors['previous'];
+$next_tov_url = $previous_tov_url = ''; if( !empty($next_tov) ) {
+$url_params = 'page=magaz.tov_details&tov_id='.$next_tov['tov_id'].'&flypage='.$p-tov-
+>get_flypage($next_tov['tov_id']).'&pop='.$pop; if( $manuf_id ) {
+$url_params .= "&amp;manuf_id=" . $manuf_id;
+}
+if( $keyword != '') {
+$url_params .= "&amp;keyword=".urlencode($keyword);
+}
+if( $pop == 1 ) {
+$next_tov_url = $sess->url( $_SERVER['PHP_SELF'].'?'.$url_params );
+} else {
+$next_tov_url = str_replace("index2","index",$sess->url( $url_params ));
+}
+}
+if( !empty($previous_tov) ) {
+$url_params = 'page=magaz.tov_details&tov_id='.$previous_tov['tov_id'].'&flypage='.$p-tov-
+>get_flypage($previous_tov['tov_id']).'&pop='.$pop; if( $manuf_id ) {
+$url_params .= "&amp;manuf_id=" . $manuf_id;
+}
+if( $keyword != '') {
+$url_params .= "&amp;keyword=".urlencode($keyword);
+}
+if( $pop == 1 ) {
+$previous_tov_url = $sess->url( $_SERVER['PHP_SELF'].'?'.$url_params );
+} else {
+$previous_tov_url = str_replace("index2","index",$sess->url( $url_params ));
+}
+}
+//[https://forum.virtuemart.net/index.php?topic=60219.0]
+$t->set( 'next_tov', $next_tov );
+$t->set( 'next_tov_url', $next_tov_url );
+$t->set( 'previous_tov', $previous_tov );
+$t->set( 'previous_tov_url', $previous_tov_url );
+
+$prt_id_link = $bd_tov->f("tov_prt_id");
+$return_link = "";
+if ($prt_id_link <> 0 ) {
+$q = "SELECT tov_name FROM #  {em}_tov WHERE tov_id = '$tov_prt_id'
+LIMIT 0,1";
+$bd->query( $q );
+$bd->next_record(); 
+$tov_prt_name = $bd->f("tov_name");
+$return_link = "&nbsp;<a class=\"pathway\" href=\"";
+$return_link .= $sess->url($_SERVER['PHP_SELF'] . "?page=magaz.tov_details&tov_id=$prt_id_link");
+$return_link .= "\">";
+$return_link .= $tov_prt_name;
+$return_link .= "</a>";
+$return_link .= " ".emCommonHTML::pathway_separator()." ";
+}
+$t->set( 'return_link', $return_link );
+$navigation_pathway = $t->fetch( 'common/pathway.t.php');
+
+if ($p-tov_categ->has_chds($categ_id) ) {
+$categ_chds = $p-tov_categ->get_chd_list($categ_id);
+$t->set( 'categories', $categ_chds );
+$navigation_chdlist = $t->fetch( 'common/categChdlist.t.php');
+}
+
+// Возварат на головну сторінку
+$em_mainframe->setPageTitle( html_entity_decode( substr($tov_name, 0, 60 ), ENT_QUOTES ));
+if( emIs) {
+$document = JFactory::getDocument();
+$document->setDescription(strip_tags( $bd_tov->f("tov_s_desc")));
+} else {
+$mainframe->prependMetaTag( "description", strip_tags( $bd_tov->f("tov_s_desc"))
+);
+}
+//[https://forum.virtuemart.net/index.php?topic=60219.0]
+
+if ($perm->check("admin,storeadmin")) {
+$edit_link = '<a href="'. $sess->url( 'index2.php?page=tov.tov_form&next_page=magaz.tov_details&tov_id='.$tov_id).'">
+<img src="imag/M_imag/edit.png" width="16" height="16" alt="'. $EM_LANG-
+>_('PMAGAZ_TOV_FORM_EDIT_TOV') .'" border="0" /></a>';
+}
+else {
+$edit_link = "";
+}
+$manuf_id = $p-tov->get_manuf_id($tov_id);
+$manuf_name = $p-tov->get_mf_name($tov_id);
+$manuf_link = "";
+if( $manuf_id && !empty($manuf_name) ) {
+$link = "$mosConfig_live_site/index2.php?page=magaz.manuf_page&amp;manuf_id=$manuf_id&amp;ou tput=lite&amp;option=com_virtuemart&amp;Itemid=".$Itemid;
+$text = '( '.$manuf_name.' )';
+$manuf_link .= emPopupLink( $link, $text );
+if( @$_REQUEST['output'] == "pdf" )
+$manuf_link = "<a href=\"$link\" target=\"_blank\" title=\"$text\">$text</a>";
+} 
+// ціна товра
+if (_SHOW_PRICES == '1') {
+if( $bd_tov->f("tov_unit") && EM_PRICE_SHOW_PACKAGING_PRICELABEL)
+{
+$tov_price_lbl = "<strong>". $EM_LANG-
+>_('PMAGAZ_KORZ_PRICE_PER_UNIT').' ('.$bd_tov->f("tov_unit")."):</strong>";
+}
+else { 
+
+": </strong>";
+}
+ 
+$tov_price_lbl = "<strong>". $EM_LANG->_('PMAGAZ_KORZ_PRICE'). 
+
+}
+else {
+
+}
+ 
+$tov_price = $p-tov->show_price( $tov_id );
+
+$tov_price_lbl = "";
+$tov_price = ""; 
+// якщо ціна товару невизначеного формату, переводити її в дробовий формат
+$tov_price_raw = $p-tov->get_adjusted_attribute_price($tov_id);
+
+if ( $bd_tov->f("tov_packaging") ) {
+$packaging = $bd_tov->f("tov_packaging") & 0xFFFF;
+$box = ($bd_tov->f("tov_packaging") >> 16) & 0xFFFF;
+$tov_packaging = ""; if ( $packaging ) {
+$tov_packaging .= $EM_LANG-
+>_('PMAGAZ_TOV_PACKAGING1').$packaging;
+if( $box ) $tov_packaging .= "<br/>";
+}
+if ( $box ) {
+$tov_packaging .= $EM_LANG-
+>_('PMAGAZ_TOV_PACKAGING2').$box;
+}
+
+$tov_packaging = str_replace("{unit}",$bd_tov->f("tov_unit")?$bd_tov-
+>f("tov_unit") : $EM_LANG->_('PMAGAZ_TOV_FORM_UNIT_DEFAULT'),$tov_packaging);
+}
+else {
+$tov_packaging = "";
+}
+//[https://forum.virtuemart.net/index.php?topic=60219.0]
+
+// Зображення товару
+$tov_full_image = $tov_prt_id!=0 && !$bd_tov->f("tov_full_image") ?
+$bdp->f("tov_full_image") : $bd_tov->f("tov_full_image"); // Change
+$tov_thumb_image = $tov_prt_id!=0 && !$bd_tov->f("tov_thumb_image") ?
+$bdp->f("tov_thumb_image") : $bd_tov->f("tov_thumb_image"); // Change
+
+// Якщо зображень трохи
+$files = p-tov_files::getFilesForTov( $tov_id );
+
+$more_imag = ""; 
+if( !empty($files['imag']) ) {
+$more_imag = $t->emMoreImagLink( $files['imag'] );
+}
+// Якщо товар має ще додаткові файли
+$file_list = p-tov_files::get_file_list( $tov_id );
+
+$tov_availability = '';
+
+if( @$_REQUEST['output'] != "pdf" ) {
+$t->set('option', $option);
+$t->set('categ_id', $categ_id );
+$t->set('tov_id', $tov_id );
+$buttons_header = $t->fetch( 'common/buttons.t.php' );
+$t->set( 'buttons_header', $buttons_header );
+$tov_availability = $p-tov->get_availability($tov_id);
+}
+$tov_availability_data = $p-tov->get_availability_data($tov_id);
+
+/** Ask seller a question **/
+$ask_seller_href = $sess->url( $_SERVER ['PHP_SELF'].'?page=magaz.ask&amp;flypage='.@$_REQUEST['flypage']."&amp;tov_id=$tov_id &amp;categ_id=$categ_id" );
+$ask_seller_text = $EM_LANG->_('EM_TOV_ENQUIRY_LBL');
+$ask_seller = '<a class="button" href="'. $ask_seller_href .'">'. $ask_seller_text .'</a>';
+
+$tov_rating = "";
+if (PMAGAZ_ALLOW_REVIEWS == '1') {
+$tov_rating = p-reviews::allvotes( $tov_id );
+}
+
+$tov_reviews = $tov_reviewform = "";
+if (PMAGAZ_ALLOW_REVIEWS == '1') {
+$tov_reviews = p-reviews::tov_reviews( $tov_id );
+if( $auth['user_id'] > 0 ) {
+$tov_reviewform = p-reviews::reviewform( $tov_id );
+}
+}
+//[https://forum.virtuemart.net/index.php?topic=60219.0]
+
+$vend_id = $p-tov->get_vendor_id($tov_id);
+$vend_name = $p-tov->get_vendorname($tov_id);
+
+$link = "$mosConfig_live_site/index2.php?page=magaz.infopage&amp;vendor_id=$vend_id&amp;output
+=lite&amp;option=com_virtuemart&amp;Itemid=".$Itemid;
+$text = $EM_LANG->_('PMAGAZ_VENDOR_FORM_INFO_LBL');
+$vendor_link = emPopupLink( $link, $text );
+
+if( @$_REQUEST['output'] == "pdf" )
+$vendor_link = "<a href=\"$link\" target=\"_blank\" title=\"$text\">$text</a>"; 
+if ($tov_prt_id!=0 && !$p-tov_type->tov_in_tov_type($tov_id)) {
+$tov_type = $p-tov_type->list_tov_type($tov_prt_id); 
+}
+else {
+
+}
+ 
+
+$tov_type = $p-tov_type->list_tov_type($tov_id); 
+
+$recent_tovs = $p-tov->recentTovs($tov_id,$t->get_cfg('showRecent', 5));
+$tovData = $bd_tov->get_row();
+$tovArray = get_object_vars( $tovData );
+
+$tovArray["tov_id"] = $tov_id;
+$tovArray["tov_full_image"] = $tov_full_image; $tovArray["tov_thumb_image"] =
+$tov_thumb_image;
+$tovArray["tov_name"] = magazMakeHtmlSafe($tovArray["tov_name"]);
+
+$t->set( 'tovArray', $tovArray );
+foreach( $tovArray as $property => $value ) {
+$t->set( $property, $value);
+}
+
+// Формування міні зображення товару
+$tov_image = $t->emBuildFullImageLink( $tovArray );
+$t->set( "tov_id", $tov_id );
+$t->set( "tov_name", $tov_name );
+$t->set( "tov_image", $tov_image );
+$t->set( "more_imag", $more_imag );
+$t->set( "imag", $files['imag'] );
+$t->set( "files", $files['files'] );
+$t->set( "file_list", $file_list );
+$t->set( "edit_link", $edit_link );
+$t->set( "manuf_link", $manuf_link );
+$t->set( "tov_price", $tov_price );
+$t->set( "tov_price_lbl", $tov_price_lbl );
+$t->set( 'tov_price_raw', $tov_price_raw );
+$t->set( "tov_description", $tov_description );
+
+$t->set( 'manuf_id', $manuf_id );
+$t->set( 'flypage', $flypage );
+$t->set( 'p-tov_attribute', $p-tov_attribute );
+$addtokorz = $t->fetch('tov_details/includes/addtokorz_form.t.php' );
+
+$t->set( "addtokorz", $addtokorz );
+$t->set( "navigation_pathway", $navigation_pathway );
+$t->set( "navigation_chdlist", $navigation_chdlist );
+$t->set( "tov_reviews", $tov_reviews );
+$t->set( "tov_reviewform", $tov_reviewform );
+$t->set( "tov_availability", $tov_availability );
+$t->set( "tov_availability_data", $tov_availability_data ); 
+$t->set( "related_tovs", $related_tovs );
+$t->set( "vendor_link", $vendor_link );
+$t->set( "tov_type", $tov_type ); // Changed Tov Type
+$t->set( "tov_packaging", $tov_packaging );
+$t->set( "ask_seller_href", $ask_seller_href );
+$t->set( "ask_seller_text", $ask_seller_text ); /
+$t->set( "ask_seller", $ask_seller );
+$t->set( "recent_tovs", $recent_tovs
+
+//[https://forum.virtuemart.net/index.php?topic=60219.0] echo $t->fetch( '/tov_details/'.$flypage . '.php' );
+?>
+
+
+В.2 Текст модуля p-tov .php
+
+
+<?php
+if( !defined( '_VALID_MOS' ) && !defined( '_JEXEC' ) ) die( 'Direct Access to '.basename( FILE ).' is not allowed.' );
+class p-tov extends emAbstractObject { var $_key = 'tov_id';
+var $_table_name = '#  {em}_tov';
+function validate(&$d) {
+global $emLogger, $database, $perm, $EM_LANG; require_once(CLASSPATH . 'imageTools.class.php' );
+$valid = true;
+$bd = new p-BD;
+//[https://andrey.lviv.ua/dictionary/php]
+$q = "SELECT tov_id,tov_thumb_image,tov_full_image FROM # {em}_tov WHERE tov_sku='";
+$q .= $d["tov_sku"] . "'";
+$bd->setQuery($q); $bd->query();
+if ($bd->next_record()&&($bd->f("tov_id") != $d["tov_id"])) {
+$emLogger->err( "A Tov with the SKU ".$d['tov_sku']." already 
+exists." );
+ 
+
+$valid = false;
+} 
+if( !empty( $d['tov_discount_id'] )) {
+if( $d['tov_discount_id'] == "override" ) {
+
+$d['is_percent'] = "0";
+
+if( PAYMENT_DISCOUNT_BEFORE == '1' ) {
+$d['amount'] = (float)$d['tov_price'] -
+(float)$d['discounted_price_override'];
+} 
+else {
+
+(float)$d['discounted_price_override'];
+}
+ 
+
+$d['amount'] = (float)$d['tov_price_incl_tax'] - 
+
+$d['start_date'] = date( 'Y-m-d' );
+require_once( CLASSPATH. 'p-tov_discount.php' );
+$p-tov_discount = new p-tov_discount;
+$p-tov_discount->add( $d );
+$d['tov_discount_id'] = $database->insertid(); emRequest::setVar( 'tov_discount_id', $d['tov_discount_id'] );
+}
+}
+if (empty($d['manuf_id'])) {
+$d['manuf_id'] = "1";
+}
+if (empty( $d["tov_sku"])) {
+$emLogger->err( $EM_LANG->_('EM_TOV_MISSING_SKU',false)
+);
+$valid = false;
+}
+if (!$d["tov_name"]) {
+$emLogger->err( $EM_LANG-
+>_('EM_TOV_MISSING_NAME',false) );
+$valid = false;
+}
+if (empty($d["tov_avbl_date"])) {
+$emLogger->err( $EM_LANG-
+>_('EM_TOV_MISSING_AVAILDATE',false) );
+$valid = false; 
+}
+else {
+
+
+
+
+}
+ 
+
+
+$day = (int) substr ( $d["tov_avbl_date"], 8, 2);
+$month= (int) substr ( $d["tov_avbl_date"], 5, 2);
+$year = (int) substr ( $d["tov_avbl_date"], 0, 4);
+$d["tov_avbl_date_timestamp"] = mktime(0,0,0,$month, $day, $year); 
+
+if (!$d["tov_prt_id"]) {
+if( empty( $d['tov_categories']) || !is_array(@$d['tov_categories'])) {
+$d['tov_categories'] = explode('|', $d['categ_ids'] );
+}
+if (sizeof(@$d["tov_categories"]) < 1) {
+$emLogger->err( $EM_LANG-
+>_('EM_TOV_MISSING_CATEG') );
+$valid = false;
+}
+}
+if (!empty( $d['tov_thumb_image_url'] )) {
+
+if (substr( $d['tov_thumb_image_url'], 0, 4) != "http") { 
+$emLogger->err( $EM_LANG-
+>_('EM_TOV_IMAGEURL_MUSTBEGIN',false) );
+$valid = false;
+}
+
+if( $bd->f("tov_thumb_image") && substr( $bd-
+>f("tov_thumb_image"), 0, 4) != "http") {
+$_REQUEST["tov_thumb_image_curr"] = $bd- 
+>f("tov_thumb_image");
+ 
+
+$d["tov_thumb_image_action"] = "delete"; if 
+(!emImageTools::validate_image($d,"tov_thumb_image","tov")) {
+return false;
+}
+}
+$d["tov_thumb_image"] = $d['tov_thumb_image_url'];
+}
+else {
+
+if (!emImageTools::validate_image($d,"tov_thumb_image","tov")) {
+$valid = false;
+}
+}
+if (!empty( $d['tov_full_image_url'] )) {
+// Cсылка на Рисунок
+if (substr( $d['tov_full_image_url'], 0, 4) != "http") {
+$emLogger->err( $EM_LANG-
+>_('EM_TOV_IMAGEURL_MUSTBEGIN',false) );
+return false; 
+
+
+4) != "http") {
+
+>f("tov_full_image");
+ 
+}
+if( $bd->f("tov_full_image") && substr( $bd->f("tov_full_image"), 0,
+
+$_REQUEST["tov_full_image_curr"] = $bd-
+
+$d["tov_full_image_action"] = "delete"; if 
+(!emImageTools::validate_image($d,"tov_full_image","tov")) {
+return false;
+}
+}
+$d["tov_full_image"] = $d['tov_full_image_url'];
+}
+else {
+
+
+if (!emImageTools::validate_image($d,"tov_full_image","tov")) {
+$valid = false;
+}
+}
+//[https://andrey.lviv.ua/dictionary/php] 
+if(isset($d["tov_advanced_attribute"])) {
+if (';' == substr($d["tov_advanced_attribute"], strlen($d["tov_advanced_attribute"])-1,1) ) {
+$d["tov_advanced_attribute"]
+=substr($d["tov_advanced_attribute"], 0, strlen($d["tov_advanced_attribute"])-1);
+}
+}
+if(isset($d["tov_custom_attribute"])) {
+if (';' == substr($d["tov_custom_attribute"], strlen($d["tov_custom_attribute"])-1,1) ) {
+$d["tov_custom_attribute"] =substr($d["tov_custom_attribute"], 0, strlen($d["tov_custom_attribute"])-1);
+}
+}
+$d["clone_tov"] = empty($d["clone_tov"]) ? "N" : "Y";
+$d["tov_publish"] = empty($d["tov_publish"]) ? "N" : "Y";
+$d["tov_special"] = empty($d["tov_special"]) ? "N" : "Y";
+
+
+$d['display_headers'] = emGet($d,'display_headers', 'Y') =='Y' ? 'Y' : 'N';
+$d['tov_list_chd'] = emGet($d,'tov_list_chd', 'Y') =='Y' ? 'Y' : 'N';
+$d['display_use_prt'] = emGet($d,'display_use_prt', 'Y') =='Y' ? 'Y' : 'N';
+$d['tov_list_type'] = emGet($d,'tov_list_type', 'Y') =='Y' ? 'Y' : 'N';
+$d['display_desc'] = emGet($d,'display_desc', 'Y') =='Y' ? 'Y' : 'N';
+
+if (@$d['tov_list'] =="Y") { if($d['list_style'] == "one")
+$d['tov_list'] = "Y"; else
+$d['tov_list'] = "YM";
+}
+else {
+$d['tov_list'] = "N";
+}
+
+$d['quantity_opt'] = p-tov::set_quantity_opt($d);
+$d['chd_opt'] = p-tov::set_chd_opt($d);
+
+$d['order_levels'] = emRequest::getInt('min_order_level').",".emRequest::getInt('max_order_level');
+
+return $valid;
+}
+
+function validate_delete( $tov_id, &$d ) { global $emLogger, $EM_LANG;
+require_once(CLASSPATH . 'imageTools.class.php' );
+
+
+
+if (empty($tov_id)) { 
+$emLogger->err( $EM_LANG-
+>_('EM_TOV_SPECIFY_DELETE',false) );
+return false;
+}
+/* Одержати імена картинок з бази*/
+$bd = new p-BD;
+$q = "SELECT tov_thumb_image,tov_full_image ";
+$q .= "FROM #  {em}_tov ";
+$q .= "WHERE tov_id='$tov_id'";
+$bd->setQuery($q); $bd->query();
+$bd->next_record();
+
+if( !stristr( $bd->f("tov_thumb_image"), "http") ) {
+$_REQUEST["tov_thumb_image_curr"] = $bd- 
+>f("tov_thumb_image");
+ 
+
+$d["tov_thumb_image_action"] = "delete";
+if (!emImageTools::validate_image($d,"tov_thumb_image","tov")) {
+$emLogger->err( $EM_LANG- 
+>_('EM_TOV_IMGDEL_FAILED',false) );
+return false;
+}
+}
+if( !stristr( $bd->f("tov_full_image"), "http") ) {
+$_REQUEST["tov_full_image_curr"] = $bd->f("tov_full_image");
+$d["tov_full_image_action"] = "delete";
+if (!emImageTools::validate_image($d,"tov_full_image","tov")) { return false;
+}
+}
+return true;
+
+}
+
+?>
+
+
+В.3 Текст модуля magaz.browse.php
+
+
+<?php
+if( !defined( '_VALID_MOS' ) && !defined( '_JEXEC' ) ) die( 'Direct Access to '.basename( FILE ).' is not allowed.' );
+mm_showMyFileName(   FILE	);
+//[https://andrey.lviv.ua/dictionary/php]
+
+require_once (CLASSPATH."p-tov.php");
+$p-tov = new p-tov;
+require_once (CLASSPATH."p-tov_categ.php");
+$p-tov_categ = new p-tov_categ;
+require_once (CLASSPATH."p-tov_files.php"); require_once (CLASSPATH."p-reviews.php"); 
+require_once (CLASSPATH."imageTools.class.php"); require_once (CLASSPATH."PEAR/Table.php"); require_once(CLASSPATH . 'p-tov_attribute.php' );
+$p-tov_attribute = new p-tov_attribute; 
+
+
+)));
+)));
+ 
+$Itemid = $sess->getShItid();
+$keyword1 = $emInputFilter->safeSQL( urldecode(emGet( $_REQUEST, 'keyword1', null
+$keyword2 = $emInputFilter->safeSQL( urldecode(emGet( $_REQUEST, 'keyword2', null
+//[http://forum.joomla.pl/archive/index.php/t-52400.html]
+$src_op= $emInputFilter->safeSQL( emGet( $_REQUEST, 'src_op', null ));
+$src_limiter= $emInputFilter->safeSQL( emGet( $_REQUEST, 'src_limiter', null )); if (empty($categ_id)) $categ_id = $src_categ;
+$default['categ_flypage'] = FLYPAGE;
+
+$bd_browse = new p-BD;
+$bdp = new p-BD;
+
+require_once( PAGEPATH. "magaz_browse_queries.php" );
+
+$bd_browse->query( $count );
+
+$num_rows = $bd_browse->f("num_rows"); if( $limitstart > 0 && $limit >= $num_rows) { 
+$list = str_replace( 'LIMIT '.$limitstart, 'LIMIT 0', $list );
+}
+if( $categ_id ) {
+/**
+* Опис категорії
+*/
+$bd->query( "SELECT categ_id, categ_name FROM # {em}_categ WHERE categ_id='$categ_id'");
+$bd->next_record();
+$categ_name = magazMakeHtmlSafe( $bd->f('categ_name') );
+
+/* Формування головної сторінки */
+$mainframe->setPageTitle( $bd->f("categ_name") );
+
+$desc = $p-tov_categ->get_description($categ_id);
+$desc = emCommonHTML::ParseContentByPlugins( $desc );
+$mainframe->prependMetaTag( "description", substr(strip_tags($desc ), 0, 255) );
+
+}
+if ($num_rows == 0 && (!empty($keyword)||!empty($keyword1))) { echo $EM_LANG->_('PMAGAZ_NO_SRC_RESULT');
+}
+elseif( $num_rows == 0 && empty($tov_type_id) && !empty($chd_list)) { 
+echo $EM_LANG->_('EMPTY_CATEG');
+}
+
+elseif( $num_rows == 1 && ( !empty($keyword) || !empty($keyword1) ) ) {
+/ / Якщо хоча б один продукт був знайдений, ми безпосередньо показуємо сторінку відомостей про нього
+$bd_browse->query( $list );
+$bd_browse->next_record();
+$flypage = $bd_browse->sf("categ_flypage") ? $bd_browse->sf("categ_flypage") :
+FLYPAGE;
+
+$url_params = "page=magaz.tov_details&amp;flypage=$flypage&amp;tov_id=" .
+$bd_browse->f("tov_id") . "&amp;categ_id=" . $bd_browse->f("categ_id"); emRedirect( $sess->url($url_params, true, false ) );
+}
+else {
+// Початок списку категорій
+$t = emTemplate::getInstance();
+
+if( $categ_id ) {
+/**
+* Опис категорії
+*/
+$browsepage_lbl = $categ_name;
+$t->set( 'browsepage_lbl', $browsepage_lbl );
+
+$t->set( 'desc', $desc );
+
+$categ_chds = $p-tov_categ->get_chd_list($categ_id);
+$t->set( 'categories', $categ_chds );
+$navigation_chdlist = $t->fetch( 'common/categChdlist.t.php');
+$t->set( 'navigation_chdlist', $navigation_chdlist );
+
+$categ_list = array_reverse( $p-tov_categ->get_navigation_list($categ_id) );
+$pathway = $p-tov_categ->getPathway( $categ_list );
+$em_mainframe->emAppendPathway( $pathway );
+
+$t->set( 'categ_id', $categ_id );
+$t->set( 'categ_name', $categ_name );
+
+$browsepage_header = $t->fetch( 'browse/includes/browse_header_categ.t.php' );
+}
+elseif( $manuf_id) {
+$bd->query( "SELECT manuf_id, mf_name, mf_desc FROM # {em}_manuf WHERE manuf_id='$manuf_id'");
+$bd->next_record();
+$mainframe->setPageTitle( $bd->f("mf_name") );
+
+$browsepage_lbl = magazMakeHtmlSafe( $bd->f("mf_name") );
+$t->set( 'browsepage_lbl', $browsepage_lbl ); 
+$browsepage_lbltext = $bd->f("mf_desc");
+$t->set( 'browsepage_lbltext', $browsepage_lbltext );
+$browsepage_header = $t->fetch( 'browse/includes/browse_header_manuf.t.php' );
+}
+elseif( $keyword ) {
+$mainframe->setPageTitle( $EM_LANG->_('PMAGAZ_SRC_TITLE',false)
+);
+$browsepage_lbl = $EM_LANG->_('PMAGAZ_SRC_TITLE') .':
+'.magazMakeHtmlSafe( $keyword );
+$t->set( 'browsepage_lbl', $browsepage_lbl );
+
+$browsepage_header = $t->fetch( 'browse/includes/browse_header_keyword.t.php' );
+}
+
+else {
+$mainframe->setPageTitle( $EM_LANG-
+>_('PMAGAZ_BROWSE_LBL',false) );#
+$browsepage_lbl = $EM_LANG->_('PMAGAZ_BROWSE_LBL');
+$t->set( 'browsepage_lbl', $browsepage_lbl );
+
+$browsepage_header = $t->fetch( 'browse/includes/browse_header_all.t.php'
+);
+}
+
+$t->set( 'browsepage_header', $browsepage_header );
+
+if (!empty($tov_type_id) && @$_REQUEST['output'] != "pdf") {
+$t->set( 'p-tov_type', $p-tov_type);
+$t->set( 'tov_type_id', $tov_type_id);
+$parameter_form = $t->fetch( 'browse/includes/browse_srcparameter_form.t.php' );
+}
+else {
+$parameter_form = '';
+}
+$t->set( 'parameter_form', $parameter_form );
+
+$show_limitbox = ( $num_rows > 5 && @$_REQUEST['output'] != "pdf" );
+$t->set( 'show_limitbox', $show_limitbox );
+
+
+$show_top_navigation = ( PMAGAZ_SHOW_TOP_PAGENAV =='1' &&
+$num_rows > $limit );
+$t->set( 'show_top_navigation', $show_top_navigation );
+
+// Підготовка навігації сторінки
+require_once( CLASSPATH . 'pageNavigation.class.php' );
+$pagenav = new emPageNav( $num_rows, $limitstart, $limit );
+$t->set( 'pagenav', $pagenav ); 
+$src_string = '';
+if ( $num_rows > 1 && @$_REQUEST['output'] != "pdf") { if ( $num_rows > 5 ) {
+$src_string =
+$mm_action_url."index.php?option=com_virtuemart&amp;Itemid=$Itemid&amp;categ_id=$categ_ id&amp;page=$modulename.browse";
+$src_string .= empty($manuf_id) ? '' : "&amp;manuf_id=$manuf_id";
+$src_string .= empty($keyword) ? '' : '&amp;keyword='.urlencode( 
+$keyword );
+ 
+if (!empty($keyword1)) {
+$src_string.="&amp;keyword1=".urlencode($keyword1);
+$src_string.="&amp;src_categ=".urlencode($src_categ);
+$src_string.="&amp;src_limiter=$src_limiter"; if (!empty($keyword2)) { 
+$src_string.="&amp;keyword2=".urlencode($keyword2);
+$src_string.="&amp;src_op=".urlencode($src_op);
+}
+}
+
+
+if (!empty($tov_type_id)){
+foreach($_REQUEST as $key => $value){
+if (substr($key, 0,13) == "tov_type_"){
+$val = emGet($_REQUEST, $key ); if( is_array( $val )) {
+foreach( $val as $var ) {
+$src_string 
+.="&".$key."[]=".urlencode($var);
+
+
+
+.="&".$key."=".urlencode($val);
+ 
+
+}
+} else {
+$src_string 
+}
+}
+}
+}
+}
+
+$t->set( 'EM_BROWSE_ORDERBY_FIELDS',
+$EM_BROWSE_ORDERBY_FIELDS);
+if ($DescOrderBy == "DESC") {
+$icon = "sort_desc.png";
+$selected = Array( "selected=\"selected\"", "" );
+$asc_desc = Array( "DESC", "ASC" );
+}
+else {
+$icon = "sort_asc.png";
+$selected = Array( "", "selected=\"selected\"" );
+$asc_desc = Array( "ASC", "DESC" ); 
+}
+$t->set( 'orderby', $orderby );
+$t->set( 'icon', $icon );
+$t->set( 'selected', $selected );
+$t->set( 'asc_desc', $asc_desc );
+$t->set( 'categ_id', $categ_id );
+$t->set( 'manuf_id', $manuf_id );
+$t->set( 'keyword', urlencode( $keyword ) );
+$t->set( 'keyword1', urlencode( $keyword1 ) );
+$t->set( 'keyword2', urlencode( $keyword2 ) );
+$t->set( 'Itemid', $Itemid );
+
+if( $show_top_navigation ) {
+$t->set( 'src_string', $src_string );
+}
+
+$orderby_form = $t->fetch( 'browse/includes/browse_orderbyform.t.php' );
+$t->set( 'orderby_form', $orderby_form );
+}
+else {
+$t->set( 'orderby_form', '' );
+}
+
+$bd_browse->query( $list );
+$bd_browse->next_record();
+$tovs_per_row = (!empty($categ_id)) ? $bd_browse->f("tovs_per_row") : TOVS_PER_ROW;
+if( $tovs_per_row < 1 ) {
+$tovs_per_row = 1;
+}
+$buttons_header = '';
+/**
+* Початок кэширования всіх відомостей про продукт у циклі	*
+**/
+
+if(@$_REQUEST['output'] != "pdf") {
+
+$t->set('option', $option);
+$t->set('categ_id', $categ_id );
+$t->set('tov_id', $tov_id );
+$buttons_header = $t->fetch( 'common/buttons.t.php' );
+
+$templatefile = (!empty($categ_id)) ? $bd_browse->f("categ_browsepage") : CATEG_TEMPLATE;
+if( $templatefile == 'managed' ) {
+/ / Автоматично вибрати шаблон перегляду із кращим отображеним кількості продуктів у ряді
+$templatefile = file_exists(EM_THEMEPATH.'templates/browse/browse_'.$tovs_per_row.'.php' )
+? 'browse_'.$tovs_per_row 
+: 'browse_5';
+
+} elseif(
+!file_exists(EM_THEMEPATH.'templates/browse/'.$templatefile.'.php'))  {
+$templatefile = 'browse_5'; 
+
+}
+else {
+
+}
+ 
+}
+
+$templatefile = "browse_lite_pdf"; 
+
+$t->set( 'buttons_header', $buttons_header );
+
+$t->set('tovs_per_row', $tovs_per_row );
+$t->set('templatefile', $templatefile );
+
+$bd_browse->reset();
+
+$tovs = array();
+$counter = 0;
+while ($bd_browse->next_record()) {
+
+
+$tov_prt_id = $bd_browse->f("tov_prt_id"); if ($tov_prt_id != 0) {
+$bdp->query("SELECT tov_full_image,tov_thumb_image,tov_name,tov_s_desc FROM # {em}_tov WHERE tov_id='$tov_prt_id'" );
+$bdp->next_record();
+}
+
+$flypage = $bd_browse->sf("categ_flypage");
+
+if (empty($flypage)) {
+$flypage = FLYPAGE;
+}
+$url_params = "page=magaz.tov_details&amp;flypage=$flypage&amp;tov_id=" .
+$bd_browse->f("tov_id") . "&amp;categ_id=" . $bd_browse->f("categ_id"); if( $manuf_id ) {
+$url_params .= "&amp;manuf_id=" . $manuf_id;
+}
+if( $keyword != '') {
+$url_params .= "&amp;keyword=".urlencode($keyword);
+}
+$url = $sess->url( $url_params );
+
+if (_SHOW_PRICES == '1' && $auth['show_prices']) {
+$tov_price = $p-tov->show_price( $bd_browse->f("tov_id") );
+}
+else {
+$tov_price = ""; 
+
+
+>f('tov_id'));
+ 
+}
+$tov_price_raw = $p-tov->get_adjusted_attribute_price($bd_browse- 
+
+/ / i -це індекс для масиву, що містить всі продукти, ми повинні його показати. щоб сортувати за зниженою ціною,
+/ /повинні використати ціну як перша частина імені індексу!
+$i = $tov_price_raw['tov_price'] . '_' . ++$counter;
+
+if( $bd_browse->f("tov_thumb_image") ) {
+$tov_thumb_image = $bd_browse->f("tov_thumb_image");
+}
+else {
+//[http://forum.joomla.pl/archive/index.php/t-52400.html]
+if( $tov_prt_id != 0 ) {
+$tov_thumb_image = $bdp->f("tov_thumb_image"); 
+}
+else {
+
+}
+}
+ 
+
+
+$tov_thumb_image = 0; 
+if( $tov_thumb_image ) {
+if( substr( $tov_thumb_image, 0, 4) != "http" ) { if(PMAGAZ_IMG_RESIZE_ENABLE == '1') {
+
+$tov_thumb_image =
+$mosConfig_live_site."/components/com_virtuemart/show_image_in_imgtag.php?filename=".urlen code($tov_thumb_image)."&amp;newxsize=".PMAGAZ_IMG_WIDTH."&amp;newysize=".PMA GAZ_IMG_HEIGHT."&amp;fileout=";
+}
+elseif( !file_exists( IMAGEPATH."tov/".$tov_thumb_image ))
+{
+$tov_thumb_image = EM_THEMEURL.'imag/'.NO_IMAGE;
+}
+}
+}
+else {
+$tov_thumb_image = EM_THEMEURL.'imag/'.NO_IMAGE;
+}
+
+/ / Одержати повний шлях зображення або URL, якщо встановлено, або його no_image	if( $bd_browse->f("tov_full_image") ) {
+$tov_full_image = $bd_browse->f("tov_full_image");
+} elseif( $tov_prt_id != 0 ) {
+$tov_full_image = $bdp->f("tov_full_image"); // Use tov_full_image 
+from Prt Tov
+ 
+
+}
+else {
+ 
+
+
+
+$tov_full_image = EM_THEMEURL . 'imag/' . NO_IMAGE; 
+
+/ / Одержати інформацію про розмір для no_image 
+
+
+NO_IMAGE );
+ 
+if( file_exists( EM_THEMEPATH . 'imag/' . NO_IMAGE ) ) {
+$full_image_info = getimagize( EM_THEMEPATH . 'imag/' .
+
+$full_image_width = $full_image_info[0]+40;
+$full_image_height = $full_image_info[16]-[25].+40; 
+}
+}
+
+/ / Одержати повний шлях зображення або URL, якщо встановлено, або його no_image	if( substr( $tov_full_image, 0, 4) != 'http' ) {
+if( file_exists( IMAGEPATH . 'tov/' . $tov_full_image ) ) {
+$full_image_info = getimagize( IMAGEPATH . 'tov/' . 
+$tov_full_image );
+ 
+
+$full_image_width = $full_image_info[0]+40;
+$full_image_height = $full_image_info[1]+40;
+} 
+
+$tov_full_image = IMAGEURL . 'tov/' . $tov_full_image;
+} elseif( !isset( $full_image_width ) || !isset( $full_image_height ) ) {
+
+$full_image_info = getimagize( $tov_full_image );
+$full_image_width = $full_image_info[0]+40;
+$full_image_height = $full_image_info[1]+40;
+}
+
+$files = p-tov_files::getFilesForTov( $bd_browse->f('tov_id') );
+$tovs[$i]['files'] = $files['files'];
+$tovs[$i]['imag'] = $files['imag']; 
+
+
+
+.")";
+ 
+$tov_name = $bd_browse->f("tov_name"); if( $bd_browse->f("tov_publish") == "N" ) {
+$tov_name .= " (". $EM_LANG->_('CMN_UNPUBLISHED',false) 
+}
+
+if( empty($tov_name) && $tov_prt_id!=0 ) {
+$tov_name = $bdp->f("tov_name
+}
+$tov_s_desc = $bd_browse->f("tov_s_desc"); if( empty($tov_s_desc) && $tov_prt_id!=0 ) {
+$tov_s_desc = $bdp->f("tov_s_desc");
+}
+$tov_details = $EM_LANG->_('PMAGAZ_FLYPAGE_LBL'); 
+
+"pdf") {
+ 
+if (PMAGAZ_ALLOW_REVIEWS == '1' && @$_REQUEST['output'] !=
+
+$tov_rating = p-reviews::allvotes( $bd_browse->f("tov_id") );
+}
+else { 
+$tov_rating = ""; 
+}
+
+if (USE_AS_CATALOGUE != '1' && $tov_price != ""
+&& !stristr( $tov_price, $EM_LANG->_('PMAGAZ_TOV_CALL') ) && !p-tov::tov_has_attributes( $bd_browse->f('tov_id'), true )
+&& $t->get_cfg( 'showAddtokorzButtonOnTovList' ) ) {
+
+$t->set( 'i', $i );
+$t->set( 'tov_id', $bd_browse->f('tov_id') );
+$t->set( 'tov_in_stock', $bd_browse->f('tov_in_stock') );
+$t->set( 'p-tov_attribute', $p-tov_attribute );
+$tovs[$i]['form_addtokorz'] = $t->fetch( 'browse/includes/addtokorz_form.t.php' );
+$tovs[$i]['has_addtokorz'] = true;
+} 
+else {
+
+
+}
+ 
+
+$tovs[$i]['form_addtokorz'] = '';
+$tovs[$i]['has_addtokorz'] = false; 
+
+$tovs[$i]['tov_flypage'] = $url;
+$tovs[$i]['tov_thumb_image'] = $tov_thumb_image;
+$tovs[$i]['tov_full_image'] = $tov_full_image;
+$tovs[$i]['full_image_width'] = $full_image_width;
+$tovs[$i]['full_image_height'] = $full_image_height;
+
+unset($full_image_width); unset($full_image_height);
+
+$tovs[$i]['tov_name'] = magazMakeHtmlSafe( $tov_name );
+$tovs[$i]['tov_s_desc'] = $tov_s_desc;
+$tovs[$i]['tov_details'] = $tov_details;
+$tovs[$i]['tov_rating'] = $tov_rating;
+$tovs[$i]['tov_price'] = $tov_price;
+$tovs[$i]['tov_price_raw'] = $tov_price_raw;
+$tovs[$i]['tov_sku'] = $bd_browse->f("tov_sku");
+$tovs[$i]['tov_weight'] = $bd_browse->f("tov_weight");
+$tovs[$i]['tov_weight_uom'] = $bd_browse->f("tov_weight_uom");
+$tovs[$i]['tov_length'] = $bd_browse->f("tov_length");
+$tovs[$i]['tov_width'] = $bd_browse->f("tov_width");
+$tovs[$i]['tov_height'] = $bd_browse->f("tov_height");
+$tovs[$i]['tov_lwh_uom'] = $bd_browse->f("tov_lwh_uom");
+$tovs[$i]['tov_in_stock'] = $bd_browse->f("tov_in_stock");
+$tovs[$i]['tov_avbl_date'] = $EM_LANG->convert( emFormatDate($bd_browse->f("tov_avbl_date"), $EM_LANG-
+>_('DATE_FORMAT_LC') ));
+$tovs[$i]['tov_availability'] = $bd_browse->f("tov_availability");
+$tovs[$i]['cdate'] = $EM_LANG->convert( emFormatDate($bd_browse-
+>f("cdate"), $EM_LANG->_('DATE_FORMAT_LC') )); 
+$tovs[$i]['mdate'] = $EM_LANG->convert( emFormatDate($bd_browse-
+>f("mdate"), $EM_LANG->_('DATE_FORMAT_LC') ));
+$tovs[$i]['tov_url'] = $bd_browse->f("tov_url");
+
+}
+if( $orderby == 'tov_price' ) {
+if ($DescOrderBy == "DESC") {
+
+krsort($tovs, SORT_NUMERIC);
+} else {
+
+ksort($tovs, SORT_NUMERIC);
+}
+}
+
+$t->set( 'tovs', $tovs );
+$t->set( 'src_string', $src_string );
+
+if ( $num_rows > 1 ) {
+$browsepage_footer = $t->fetch( 'browse/includes/browse_pagenav.t.php' );
+$t->set( 'browsepage_footer', $browsepage_footer );
+} else {
+$t->set( 'browsepage_footer', '' );
+}
+
+$recent_tovs = $p-tov->recentTovs(null,$t->get_cfg('showRecent', 5));
+$t->set('recent_tovs',$recent_tovs);
+
+$t->set('p-tov',$p-tov);
+
+echo $t->fetch( $t->config->get( 'tovListStyle' ) );
+}
+?>
+
+В.4 Текст модуля p-tov_categ
+
+
+<?php
+if( !defined( '_VALID_MOS' ) && !defined( '_JEXEC' ) ) die( 'Direct Access to '.basename( FILE ).' is not allowed.' );
+class p-tov_categ extends emAbstractObject {
+function validate_add(&$d) {
+global $emLogger, $EM_LANG; require_once(CLASSPATH . 'imageTools.class.php' );
+$valid = true;
+if (empty($d["categ_name"])) {
+$emLogger->err( $EM_LANG-
+>_('EM_TOV_CATEG_ERR_NAME') ); 
+$valid = False;
+}
+//[http://forum.joomla.pl/archive/index.php/t-52400.html] if (!empty( $d['categ_thumb_image_url'] )) {
+if (substr( $d['categ_thumb_image_url'], 0, 4) != "http") {
+$emLogger->err( $EM_LANG-
+>_('EM_TOV_IMAGEURL_MUSTBEGIN') );
+$valid = false;
+}
+
+$d["categ_thumb_image"] = $d['categ_thumb_image_url'];
+}
+else { 
+
+"categ")) {
+ 
+if (!emImageTools::validate_image( $d, "categ_thumb_image",
+
+$valid = false;
+}
+} 
+
+if (!empty( $d['categ_full_image_url'] )) {
+
+if (substr( $d['categ_full_image_url'], 0, 4) != "http") {
+$emLogger->err( $EM_LANG-
+>_('EM_TOV_IMAGEURL_MUSTBEGIN') );
+return false;
+}
+$d["categ_full_image"] = $d['categ_full_image_url'];
+}
+else {
+
+if (!emImageTools::validate_image( $d, "categ_full_image", "categ"))
+{
+$valid = false;
+}
+}
+
+return $valid;
+
+}
+
+function validate_update(&$d) {
+global $emLogger, $EM_LANG;
+$valid = true;
+require_once(CLASSPATH . 'imageTools.class.php' ); if (!$d["categ_name"]) {
+$emLogger->err( $EM_LANG-
+>_('EM_TOV_CATEG_ERR_NAME') );
+$valid = False;
+} 
+elseif ($d["categ_id"] == $d["categ_prt_id"]) {
+$emLogger->err( $EM_LANG->_('EM_TOV_CATEG_ERR_PRT')
+);
+$valid = False;
+}
+$bd = new p-BD;
+$q = 'SELECT categ_thumb_image,categ_full_image FROM # {em}_categ WHERE categ_id='. $d["categ_id"];
+$bd->query( $q );
+$bd->next_record();
+
+if (!empty( $d['categ_thumb_image_url'] )) {
+
+if (substr( $d['categ_thumb_image_url'], 0, 4) != "http") {
+$emLogger->err( $EM_LANG-
+>_('EM_TOV_IMAGEURL_MUSTBEGIN') );
+$valid = false;
+}
+
+if( $bd->f("categ_thumb_image") && substr( $bd-
+>f("categ_thumb_image"), 0, 4) != "http") {
+$_REQUEST["categ_thumb_image_curr"] = $bd- 
+>f("tov_thumb_image"); "categ")) {
+}
+ 
+
+$d["categ_thumb_image_action"] = "delete";
+if (!emImageTools::validate_image( $d, "tov_thumb_image",
+
+return false;
+} 
+
+}
+else {
+ 
+$d["categ_thumb_image"] = $d['categ_thumb_image_url']; 
+ 
+
+"categ")) {
+ 
+if (!emImageTools::validate_image( $d, "categ_thumb_image",
+
+$valid = false;
+}
+} 
+
+if (!empty( $d['categ_full_image_url'] )) {
+if (substr( $d['categ_full_image_url'], 0, 4) != "http") {
+$emLogger->err( $EM_LANG-
+>_('EM_TOV_IMAGEURL_MUSTBEGIN') );
+return false;
+}
+if( $bd->f("categ_full_image") && substr( $bd-
+>f("categ_thumb_image"), 0, 4) != "http") {
+$_REQUEST["categ_full_image_curr"] = $bd-
+>f("categ_full_image");
+$d["categ_full_image_action"] = "delete"; 
+
+"categ")) {
+ 
+if (!emImageTools::validate_image( $d, "categ_full_image", return false; 
+}
+
+
+}
+else {
+{
+
+
+}
+ 
+
+}
+$d["categ_full_image"] = $d['categ_full_image_url'];
+
+
+if (!emImageTools::validate_image( $d, "categ_full_image", "categ"))
+
+$valid = false;
+} 
+
+return $valid;
+
+}
+
+function validate_delete( $categ_id, &$d) { global $emLogger, $EM_LANG;
+$bd = new p-BD;
+require_once(CLASSPATH . 'imageTools.class.php' ); if (empty( $categ_id )) {
+$emLogger->err( $EM_LANG-
+>_('EM_TOV_CATEG_ERR_DELETE_SELECT') );
+return False;
+}
+
+// Перевірка спадкоємця
+$q = "SELECT * FROM # {em}_categ_xref where categ_prt_id='$categ_id'";
+$bd->setQuery($q); $bd->query(); if ($bd->next_record()) {
+$emLogger->err( $EM_LANG-
+>_('EM_TOV_CATEG_ERR_DELETE_CHDREN') );
+return False;
+}
+
+$q = "SELECT categ_thumb_image,categ_full_image FROM # {em}_categ WHERE categ_id='$categ_id'";
+$bd->query( $q );
+$bd->next_record();
+
+
+if( !stristr( $bd->f("categ_thumb_image"), "http") ) {
+$_REQUEST["categ_thumb_image_curr"] = $bd- 
+>f("categ_thumb_image");
+ 
+
+$d["categ_thumb_image_action"] = "delete"; if 
+(!emImageTools::validate_image($d,"categ_thumb_image","categ")) { 
+$emLogger->err( $EM_LANG-
+>_('EM_TOV_CATEG_ERR_DELETE_IMAG') );
+return false;
+}
+}
+
+if( !stristr( $bd->f("categ_full_image"), "http") ) {
+$_REQUEST["categ_full_image_curr"] = $bd- 
+>f("categ_full_image");
+ 
+
+$d["categ_full_image_action"] = "delete";
+if (!emImageTools::validate_image($d,"categ_full_image","categ")) { return false; 
+}
+}
+return True;
+}
+
+function add( &$d ) {
+global $emLogger, $EM_LANG;
+$p-vendor_id = $_SESSION["p-vendor_id"];
+
+$bd = new p-BD;
+$timestamp = time();
+
+if ($this->validate_add($d)) {
+
+if (!emImageTools::process_imag($d)) { return false;
+}
+
+while(list($key,$value)= each($d)) { if (!is_array($value))
+$d[$key] = addslashes($value);
+}
+// Знайдемо последньюю категорію
+// рівень поточної категорії
+$q = 'SELECT MAX(list_order) AS list_order FROM # {em}_categ_xref,# {em}_categ ';
+$q .= 'WHERE categ_prt_id='.emRequest::getInt('prt_categ_id');
+$q .= ' AND categ_chd_id=categ_id';
+$bd->query( $q );
+$bd->next_record();
+
+$list_order = intval($bd->f("list_order"))+1; if (empty($d["categ_publish"])) {
+$d["categ_publish"] = "N";
+}
+$fields = array('vendor_id' => $p-vendor_id, 
+
+emGet( $d, 'categ_name' ), emGet( $d, 'categ_publish' ),
+=> emGet( $d, 'categ_description', '', EMREQUEST_ALLOWHTML ), 'categ_browsepage' => emGet( $d, 'categ_browsepage' ),
+emRequest::getInt( 'tovs_per_row' ), emGet( $d, 'categ_flypage' ),
+'categ_thumb_image' => emGet( $d, 'categ_thumb_image' ),
+
+=> emGet( $d, 'categ_full_image' ),
+
+$timestamp,
+
+$timestamp,
+
+$list_order,
+ 
+'categ_name' => 'categ_publish' => 'categ_description'
+
+
+'tovs_per_row' => 'categ_flypage' =>
+
+
+'categ_full_image' 'cdate' =>
+'mdate' => 'list_order' =>
+); 
+$bd->buildQuery('INSERT', '#  {em}_categ', $fields );
+$bd->query();
+
+$categ_id = $_REQUEST['categ_id'] = $bd->last_insert_id();
+
+ 
+
+
+$categ_id
+ 
+$fields = array('categ_prt_id' => (int)$d["prt_categ_id"],
+'categ_chd_id' => 
+);
+$bd->buildQuery('INSERT', '#  {em}_categ_xref', $fields );
+$bd->query();
+
+$emLogger->info( $EM_LANG->_('EM_TOV_CATEG_ADDED').': "'.emGet($d,'categ_name').'"' );
+return true; 
+}
+else {
+}
+ 
+
+return False; 
+}
+
+function update(&$d) {
+global $emLogger, $EM_LANG;
+$p-vendor_id = $_SESSION["p-vendor_id"];
+$bd = new p-BD; 
+
+$timestamp = time();
+
+foreach ($d as $key => $value) { if (!is_array($value))
+$d[$key] = addslashes($value);
+}
+if ($this->validate_update($d)) {
+if (!emImageTools::process_imag($d)) { return false;
+}
+if (empty($d["categ_publish"])) {
+$d["categ_publish"] = "N"; 
+
+
+emGet( $d, 'categ_name' ), emGet( $d, 'categ_publish' ),
+ 
+}
+$fields = array(
+ 
+
+
+'categ_name' =>
+'categ_publish' => 'categ_description' 
+=> emGet( $d, 'categ_description', '', EMREQUEST_ALLOWHTML ), 
+'categ_browsepage' => emGet( $d, 'categ_browsepage' ), emRequest::getInt( 'tovs_per_row' ),
+emGet( $d, 'categ_flypage' ),
+
+'categ_thumb_image' => emGet( $d, 'categ_thumb_image' ),
+
+=> emGet( $d, 'categ_full_image' ),
+
+$timestamp, emRequest::getInt('list_order'),
+ 
+
+'tovs_per_row' => 'categ_flypage' =>
+
+
+'categ_full_image' 'mdate' => 'list_order' =>
+); 
+$bd->buildQuery('UPDATE', '# {em}_categ', $fields, 'WHERE categ_id=' .(int)$d["categ_id"].' AND vendor_id='.$p-vendor_id );
+$bd->query();
+if( $d['current_prt_id'] != $d["categ_prt_id"] ) {
+$fields = array('categ_prt_id' => (int)$d["categ_prt_id"]);
+$bd->buildQuery('UPDATE', '# {em}_categ_xref', $fields, 'WHERE categ_chd_id='.(int)$d["categ_id"] );
+$bd->query();
+}
+
+/ * Перенаправляти категорій ЯКЩО list_order була змінена * /
+if( intval($d['list_order']) != intval($d['currentpos'])) {
+$bdu = new p-BD;
+/* Зрушити порядок списку нагору */ 
+if( intval($d['list_order']) < intval($d['currentpos']) ) {
+ 
+
+# {em}_categ_xref,# {em}_categ "; categ_prt_id='".(int)$d["categ_prt_id"]."' ";
+ 
+$q = "SELECT categ_id FROM
+
+$q .= "WHERE
+$q .= "AND categ_chd_id=categ_id ";
+$q .= "AND categ_id <> '" . $d["categ_id"] . "' ";
+$q .= "AND list_order >= '" . (int)$d["list_order"] . "'";
+$bd->query( $q ); 
+
+while( $bd->next_record() ) {
+$bdu->query("UPDATE # {em}_categ SET list_order=list_order+1 WHERE categ_id='".$bd->f("categ_id")."'");
+}
+}
+/* Зрушити порядок списку вниз */ else { 
+
+# {em}_categ_xref,# {em}_categ "; categ_prt_id='".(int)$d["categ_prt_id"]."' ";
+
+
+"'";
+
+"'";
+ 
+$q = "SELECT categ_id FROM
+
+$q .= "WHERE
+
+$q .= "AND categ_chd_id=categ_id ";
+$q .= "AND categ_id <> '" . $d["categ_id"] . "' ";
+$q .= "AND list_order > '" . intval($d["currentpos"]) .
+
+$q .= "AND list_order <= '" . intval($d["list_order"]) .
+
+$bd->query( $q ); 
+
+while( $bd->next_record() ) {
+$bdu->query("UPDATE # {em}_categ SET list_order=list_order-1 WHERE categ_id='".$bd->f("categ_id")."'");
+}
+
+}
+} /* Кінець перенапрямку*/
+
+if( $d["categ_prt_id"] != $d["current_prt_id"] ) {
+/ / Давайте з'ясуємо останньої категорії в
+/ / Новий рівень категорії
+$q = "SELECT MAX(list_order) AS list_order FROM # {em}_categ_xref,# {em}_categ ";
+$q .= "WHERE categ_prt_id='".(int)$d["categ_prt_id"]."' ";
+$q .= "AND categ_chd_id=categ_id ";
+$q .= "AND categ_id <> '".$d["categ_id"]."'";
+$bd->query( $q );
+$bd->next_record(); 
+$q = "UPDATE #  {em}_categ SET list_order=".$bd-
+>f("list_order")."+1 WHERE categ_id='".$d["categ_id"]."'";
+$bd->query( $q );
+}
+
+$emLogger->info( $EM_LANG-
+>_('EM_TOV_CATEG_UPDATED').': "'.emGet($d,'categ_name')."'" ); 
+
+}
+else {
+
+}
+}
+ 
+return True; return False; 
+
+function delete( &$d ) {
+$record_id = $d["categ_id"]; if( is_array( $record_id)) {
+foreach( $record_id as $record) {
+if( !$this->delete_record( $record, $d )) return false; 
+
+
+
+
+
+}
+/**
+ 
+
+}
+else {
+
+}
+ 
+}
+return true;
+
+return $this->delete_record( $record_id, $d ); 
+* Видалити запис.
+*/
+function delete_record( $record_id, &$d ) {
+global $p-tov, $bd, $emLogger, $EM_LANG; if (!$this->validate_delete($record_id, $d)) {
+return False;
+}
+$q = "CREATE TEMPORARY TABLE IF NOT EXISTS '#  tmp_prod' AS
+(SELECT * FROM '# {em}_tov_categ_xref' WHERE 'categ_id'='$record_id');";
+$bd->query( $q );
+$q = "SELECT # {em}_tov_categ_xref.tov_id FROM '# {em}_tov_categ_xref', '# tmp_prod'
+WHERE # {em}_tov_categ_xref.tov_id=# tmp_prod.tov_id AND # {em}_tov_categ_xref.categ_id!='$record_id';";
+$bd->query( $q );
+if( $bd->num_rows() > 0 ) {
+$i = 0; 
+
+(";
+ 
+$q = "DELETE FROM # {em}_tov_categ_xref WHERE tov_id IN while( $bd->next_record() ) { 
+$q .= "'".$bd->f("tov_id")."'"; if( $i++ < $bd->num_rows()-1 )
+$q .= ",";
+} 
+
+}
+else {
+ 
+$q .= ") AND categ_id='$record_id'";
+$bd->query( $q ); 
+ 
+
+'categ_id'='$record_id';";
+ 
+$q = "SELECT tov_id FROM '#  {em}_tov_categ_xref' WHERE
+
+$bd->query ( $q );
+$d['tov_id'] = Array();
+while( $bd->next_record() ) {
+$d['tov_id'][] = $bd->f("tov_id"); 
+}
+$p-tov->delete( $d );
+}
+
+$q = "DELETE FROM #  {em}_categ WHERE categ_id='$record_id'";
+$bd->setQuery($q);  $bd->query();
+
+$q = "DELETE FROM # {em}_categ_xref WHERE categ_chd_id='$record_id'";
+$bd->setQuery($q);  $bd->query();
+
+if (!emImageTools::process_imag($d)) { return false; 
+
+$record_id." );
+
+}
+ 
+}
+$emLogger->info( $EM_LANG->_('EM_TOV_CATEG_DELETED').": return True; 
+function get_field( $categ_id, $field_name ) { if( $categ_id == 0 ) return '';
+$bd = new p-BD;
+
+if( !isset($GLOBALS['categ_info'][$categ_id][$field_name] )) {
+$q = 'SELECT categ_id, '# {em}_categ'.* FROM '# {em}_categ' WHERE 'categ_id'='.(int)$categ_id;
+$bd->query($q);
+if ($bd->next_record()) {
+$values = get_object_vars( $bd->getCurrentRow() );
+
+foreach( $values as $key => $value ) {
+$GLOBALS['categ_info'][$categ_id][$key] = $value;
+} 
+if( !isset( $GLOBALS['categ_info'][$categ_id][$field_name] ))
+{
+$GLOBALS['emLogger']->debug( 'The Field
+'.$field_name. ' does not exist in the tov table!');
+$GLOBALS['categ_info'][$categ_id][$field_name] = 
+true;
+ 
+
+
+}
+else {
+
+}
+}
+ 
+
+}
+
+
+$GLOBALS['categ_info'][$categ_id][$field_name] = false; 
+
+}
+/ **
+ 
+return $GLOBALS['categ_info'][$categ_id][$field_name]; 
+*	Ця функція повернення інформації в категорію масив, що містить
+*	@param boolean показує тільки опубліковані продукти?
+*	@param string показує рядка ключове слово для фільтрації категорії
+*	/
+function getCategTreeArray( $only_published=true, $keyword = "" ) {
+
+$bd = new p-BD;
+if( empty( $GLOBALS['categ_info']['categ_tree'])) {
+
+$query = "SELECT categ_id, categ_description, categ_name,categ_chd_id as cid, categ_prt_id as pid,list_order, categ_publish
+FROM #  {em}_categ, #  {em}_categ_xref 
+WHERE ";
+ 
+if( $only_published ) {
+$query .= "#  {em}_categ.categ_publish='Y' AND "; 
+}
+$query .=
+"#  {em}_categ.categ_id=#  {em}_categ_xref.categ_chd_id ";
+if( !empty( $keyword )) {
+$query .= "AND ( categ_name LIKE '%$keyword%' ";
+$query .= "OR categ_description LIKE '%$keyword%' ";
+$query .= ") ";
+}
+$query .= "ORDER BY #  {em}_categ.list_order ASC, # {em}_categ.categ_name ASC";
+/ / Инициализировать запит у рознімання $database
+/ / Це переводить '#   ' префікс у реальний префікса бази даних
+$bd->query( $query );
+$categories = Array();
+/ / Передача Результат у доступний для пошуку масиву
+
+while( $bd->next_record() ) {
+
+
+$categories[$bd->f("cid")]["categ_chd_id"] = $bd->f("cid"); 
+
+
+>f("categ_name");
+
+>f("categ_description");
+
+
+>f("categ_publish");
+}
+ 
+$categories[$bd->f("cid")]["categ_prt_id"] = $bd->f("pid");
+$categories[$bd->f("cid")]["categ_name"] = $bd-
+
+$categories[$bd->f("cid")]["categ_description"] = $bd-
+
+$categories[$bd->f("cid")]["list_order"] = $bd->f("list_order");
+$categories[$bd->f("cid")]["categ_publish"] = $bd- 
+ 
+
+
+}
+else {
+
+}
+}
+ 
+$GLOBALS['categ_info']['categ_tree'] = $categories; return $GLOBALS['categ_info']['categ_tree'];
+
+return $GLOBALS['categ_info']['categ_tree']; 
+function sortCategTreeArray(&$categArr) {
+/ / Скопіювати масив у масив з auto_incrementing індексами
+$key = array_keys($categArr);
+$nrows = $size = sizeOf($key);
+
+
+
+/ ** ПЕРШИЙ КРОК
+*	Замовити категорії масив і побудувати дерево
+**/
+
+$id_list = array();
+$row_list = array();
+$depth_list = array();
+
+$chdren = array();
+$prt_ids = array();
+$prt_ids_hash = array();
+
+$categ_tmp = Array(); for ($i=0; $i<$size; $i++)
+{
+$categ_tmp[$i] = &$categArr[$key[$i]];
+$prt_ids[$i] = $categ_tmp[$i]['categ_prt_id']; if($categ_tmp[$i]["categ_prt_id"] == 0)
+{
+array_push($id_list,$categ_tmp[$i]["categ_chd_id"]); array_push($row_list,$i);
+array_push($depth_list,0);
+}
+
+$prt_id = $prt_ids[$i]; 
+if (isset($prt_ids_hash[$prt_id]))
+{
+$prt_ids_hash[$prt_id][$i] = $prt_id; 
+}
+else
+{
+
+}
+ 
+
+
+
+$prt_ids_hash[$prt_id] = array($i => $prt_id); 
+
+}
+
+$loop_count = 0;
+$watch = array(); while(count($id_list) < $nrows) {
+
+if( $loop_count > $nrows ) break;
+$id_temp = array();
+$row_temp = array();
+$depth_temp = array();
+for($i = 0 ; $i < count($id_list) ; $i++) {
+$id = $id_list[$i];
+$row = $row_list[$i];
+$depth = $depth_list[$i]; array_push($id_temp,$id); array_push($row_temp,$row); array_push($depth_temp,$depth);
+$chdren = @$prt_ids_hash[$id]; if (!empty($chdren))
+{
+foreach($chdren as $key => $value) { if(
+!isset($watch[$id][$categ_tmp[$key]["categ_chd_id"]])) {
+$watch[$id][$categ_tmp[$key]["categ_chd_id"]] = 1; array_push($id_temp,$categ_tmp[$key]["categ_chd_id"]);
+array_push($row_temp,$key); array_push($depth_temp,$depth + 1);
+}
+}
+}
+}
+$id_list = $id_temp;
+$row_list = $row_temp;
+$depth_list = $depth_temp;
+$loop_count++;
+}
+return array('id_list' => $id_list, 
+
+
+
+}
+function get_categ_tree( $categ_id=0,
+ 
+'row_list' => $row_list, 'depth_list' => $depth_list, 'categ_tmp' => $categ_tmp); 
+$links_css_class="mainlevel",
+$list_css_class="mm123",
+$highlighted_style="font-style:italic;" ) {
+global $sess;
+//[http://forum.joomla.pl/archive/index.php/t-52400.html]
+$categories = p-tov_categ::getCategTreeArray();
+$result = p-tov_categ::sortCategTreeArray($categories);
+$row_list = $result['row_list'];
+$depth_list = $result['depth_list'];
+$categ_tmp = $result['categ_tmp'];
+$nrows = sizeof($categ_tmp);
+
+
+$key = array_keys($categories);
+
+$nrows = $size = sizeOf($key);
+$html = "";
+
+$allowed_subcategories = Array();
+if( !empty( $categories[$categ_id]["categ_prt_id"] ) ) {
+$root = $categories[$categ_id];
+$allowed_subcategories[] = $categories[$categ_id]["categ_prt_id"]; while( !empty( $root["categ_prt_id"] )) {
+$allowed_subcategories[] =
+$categories[$root["categ_chd_id"]]["categ_chd_id"];
+$root = $categories[$root["categ_prt_id"]];
+}
+}
+
+if( $nrows < count( $row_list ) ) {
+$nrows = count( $row_list );
+}
+
+// Показати категорію
+for($n = 0 ; $n < $nrows ; $n++) {
+
+if( !isset( $row_list[$n] ) || !isset(
+$categ_tmp[$row_list[$n]]["categ_chd_id"] ) )
+continue;
+if( $categ_id == $categ_tmp[$row_list[$n]]["categ_chd_id"] )
+$style = $highlighted_style; else
+$style = "";
+$allowed = false;
+if( $depth_list[$n] > 0 ) { 
+// Подкатегория
+if( isset( $root ) && in_array(
+$categ_tmp[$row_list[$n]]["categ_chd_id"], $allowed_subcategories )
+|| $categ_tmp[$row_list[$n]]["categ_prt_id"] == $categ_id
+|| $categ_tmp[$row_list[$n]]["categ_prt_id"] == @$categories[$categ_id]["categ_prt_id"]) {
+$allowed = true;
+
+}
+}
+else
+$allowed = true;
+$append = ""; if( $allowed ) {
+if( $style == $highlighted_style ) {
+$append = 'id="active_menu"';
+}
+if( $depth_list[$n] > 0 ) {
+$css_class = "sublevel"; 
+}
+else {
+
+}
+ 
+
+
+$css_class = $links_css_class; 
+
+$catname = magazMakeHtmlSafe(
+$categ_tmp[$row_list[$n]]["categ_name"] ); 
+
+
+$sess-
+ 
+$html .= '
+<a title="'.$catname.'" style="display:block;'.$style.'" class="'. $css_class .'" href="'. 
+>url(URL."index.php?page=magaz.browse&amp;categ_id=".$categ_tmp[$row_list[$n]]["categ_ch d_id"]) .'" '.$append.'>' 
+$catname
+ 
+. str_repeat("&nbsp;&nbsp;&nbsp;",$depth_list[$n]) .
+
+. p-tov_categ::tovs_in_categ( 
+$categ_tmp[$row_list[$n]]["categ_chd_id"] )
+.'</a>';
+}
+}
+
+return $html;
+}
+
+?> 
